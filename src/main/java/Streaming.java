@@ -7,7 +7,7 @@ import java.io.RandomAccessFile;
 
 public class Streaming {
 
-	static final int kProgressStep = 10000;
+	static final int kProgressStep = 100000;
 
     public static void main(String [] args) throws Exception {
 
@@ -28,6 +28,7 @@ public class Streaming {
 		}
 
 		long startTime = System.nanoTime();
+		long stampTime = System.nanoTime();
         RandomAccessFile out = new RandomAccessFile(args[0]+".adj","rw");
 		NodeIterator nIter = gr.nodeIterator();
 		while(nIter.hasNext()) {
@@ -41,8 +42,9 @@ public class Streaming {
 			}
             out.writeInt(Integer.reverseBytes(gr.numNodes()+u));
             if((u+1) % kProgressStep == 0) {
-				System.out.println(u + " nodes processed\t" + ( (u*100.0f)/gr.numNodes()) + "%\t" + (kProgressStep*1e6f/(System.nanoTime()-startTime)) + " nodes per microsecond" );
-				startTime = System.nanoTime();
+				System.out.print(u + " nodes processed\t" + ( (u*100.0f)/gr.numNodes()) + "%\t" + (kProgressStep*1e6f/(System.nanoTime()-stampTime)) + " nodes per microsecond ");
+				stampTime = System.nanoTime();
+				System.out.println((gr.numNodes() - u) / (( (stampTime - startTime) /  u)) + " seconds remaining");
 			}
 		}
 		out.close();
