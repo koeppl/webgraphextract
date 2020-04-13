@@ -1,12 +1,13 @@
 # webgraph
 
-- Download name.graph and name.properties from WebGraph
-- java it.unimi.dsi.webgraph.BVGraph -o -O -L name
-- java Transforma name
+- Download the files `instance.graph` and `instance.properties` of a webgraph `instance` from [WebGraph](http://law.di.unimi.it/datasets.php)
+- run `convert.sh instance`
 
-The result is a binary file name.adj with the following format:
-- An integer with the number of nodes
-- A long with the number of arcs
-- The adjacency lists of each node, the start of each adjacency list is 
-represented with a negative number. The first adjacecny list starts after 
-reading -1 and ends before reading -2
+The results are two binary files `instance.stat` and `instance.adj`.
+`instance.stat` stores two integers:
+- A 32-bit integer with the number of nodes
+- A 64-bit long with the number of arcs
+
+
+`instance.adj` stores the adjacency lists of each node in sorted order.
+The end of the adjacency list of the `i`-th node is marked with the number `n+i`, where `n` is the number of nodes in the graph.
