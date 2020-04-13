@@ -7,7 +7,7 @@ import java.io.RandomAccessFile;
 
 public class Streaming {
 
-	static final int kProgressStep = 100000;
+	static final int kProgressStep = 10000;
 
     public static void main(String [] args) throws Exception {
 
@@ -16,6 +16,8 @@ public class Streaming {
             return;
         }
         BVGraph gr = BVGraph.loadOffline(args[0]);
+
+		assert gr.numNodes() < Integer.MAX_VALUE - gr.numNodes(); // we want to store values up to 2*gr.numNodes() in 32bit
 
 		{
 			System.out.println("total nodes: " + gr.numNodes());
@@ -27,7 +29,7 @@ public class Streaming {
 			out.close();
 		}
 
-		long startTime = System.nanoTime();
+		final long startTime = System.nanoTime();
 		long stampTime = System.nanoTime();
         RandomAccessFile out = new RandomAccessFile(args[0]+".adj","rw");
 		NodeIterator nIter = gr.nodeIterator();
@@ -44,7 +46,7 @@ public class Streaming {
             if((u+1) % kProgressStep == 0) {
 				System.out.print(u + " nodes processed\t" + ( (u*100.0f)/gr.numNodes()) + "%\t" + (kProgressStep*1e6f/(System.nanoTime()-stampTime)) + " nodes per microsecond ");
 				stampTime = System.nanoTime();
-				System.out.println((gr.numNodes() - u) / (( (stampTime - startTime) /  u)) + " seconds remaining");
+				System.out.println((((gr.numNodes() - u) * 1.0f* (stampTime - startTime)) / (u * 1.0e9)) + " seconds remaining");
 			}
 		}
 		out.close();
