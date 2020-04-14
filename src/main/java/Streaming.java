@@ -1,56 +1,120 @@
-import it.unimi.dsi.webgraph.BVGraph;
+import it.unimi.dsi.logging.ProgressLogger;
+import it.unimi.dsi.webgraph.ImmutableGraph;
 import it.unimi.dsi.webgraph.NodeIterator;
 import it.unimi.dsi.webgraph.LazyIntIterator;
 
 import java.io.RandomAccessFile;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.martiansoftware.jsap.FlaggedOption;
+import com.martiansoftware.jsap.JSAP;
+import com.martiansoftware.jsap.JSAPResult;
+import com.martiansoftware.jsap.Parameter;
+import com.martiansoftware.jsap.SimpleJSAP;
+import com.martiansoftware.jsap.UnflaggedOption;
 
 
 public class Streaming {
 
+	private static final Logger LOGGER = LoggerFactory.getLogger(Dump.class);
+
 	static final int kProgressStep = 10000;
 
-    public static void main(String [] args) throws Exception {
 
-        if(args.length!=1) {
-            System.out.println("Usage: java Streaming <basename>");
-            return;
+    public static void main(String arg[]) throws Exception {
+        SimpleJSAP jsap = new SimpleJSAP(Dump.class.getName(),
+                "Extracting the adjacency lists of a webgraph",
+                new Parameter[]{
+                    new FlaggedOption("logInterval", JSAP.LONG_PARSER, Long.toString(ProgressLogger.DEFAULT_LOG_INTERVAL), JSAP.NOT_REQUIRED, 'l', "log-interval",
+                            "The minimum time interval between activity logs in milliseconds."),
+                    new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, JSAP.NOT_GREEDY, "The basename of the webgraph."),
+                    new FlaggedOption("outfile", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "outfile", "The filename of the output."),
+                    new FlaggedOption("type", JSAP.LONG_PARSER, "0", JSAP.NOT_REQUIRED, 't', "type", "output type (0: binary, 1: human readable)."),
+				});
+
+        JSAPResult jsapResult = jsap.parse(arg);
+        if(jsap.messagePrinted()) {
+            System.exit(1);
         }
-        BVGraph gr = BVGraph.loadOffline(args[0]);
+
+        final String basename = jsapResult.getString("basename");
+        final long outputtype = jsapResult.getLong("type");
+		final String outfilename = jsapResult.getString("outfile");
+        ProgressLogger pl = new ProgressLogger(LOGGER, jsapResult.getLong("logInterval"), TimeUnit.MILLISECONDS);
+		final ImmutableGraph graph = ImmutableGraph.loadOffline(basename);
+
+
+		pl.start("Processing " + graph.numNodes() + " nodes and " + graph.numArcs() + " arcs.");
+		pl.expectedUpdates = graph.numNodes();
+		pl.itemsName = "nodes";
+
+		if(outputtype == 1) {
+			humanDump(graph,  outfilename, pl);
+		} else {
+			binaryDump(graph, outfilename, pl);
+		}
+    }
+
+
+
+    public static void binaryDump(final ImmutableGraph gr, final String outfilename, final ProgressLogger pl) throws Exception {
 
 		assert gr.numNodes() < Integer.MAX_VALUE - gr.numNodes(); // we want to store values up to 2*gr.numNodes() in 32bit
 
-		{
-			System.out.println("total nodes: " + gr.numNodes());
-			System.out.println("total arcs: " + gr.numArcs());
 
-			RandomAccessFile out = new RandomAccessFile(args[0]+".stat","rw");
+		{//!write stats
+
+			RandomAccessFile out = new RandomAccessFile(outfilename + ".stat","rw");
 			out.writeInt(Integer.reverseBytes(gr.numNodes()));
 			out.writeLong(Long.reverseBytes(gr.numArcs()));
 			out.close();
 		}
 
-		final long startTime = System.nanoTime();
-		long stampTime = System.nanoTime();
-        RandomAccessFile out = new RandomAccessFile(args[0]+".adj","rw");
+
+
+        RandomAccessFile out = new RandomAccessFile(outfilename + ".adj","rw");
 		NodeIterator nIter = gr.nodeIterator();
 		while(nIter.hasNext()) {
 			int u = nIter.nextInt();
 			LazyIntIterator eIter = nIter.successors();
-			//System.out.println("visit node " + u);
 
 			int v = 0;
 			while((v = eIter.nextInt()) != -1) {
                 out.writeInt(Integer.reverseBytes(v));
 			}
+
             out.writeInt(Integer.reverseBytes(gr.numNodes()+u));
-            if((u+1) % kProgressStep == 0) {
-				System.out.print(u + " nodes processed\t" + ( (u*100.0f)/gr.numNodes()) + "%\t" + (kProgressStep*1e6f/(System.nanoTime()-stampTime)) + " nodes per microsecond ");
-				stampTime = System.nanoTime();
-				System.out.println((((gr.numNodes() - u) * 1.0f* (stampTime - startTime)) / (u * 1.0e9)) + " seconds remaining");
-			}
+            pl.update();
+
 		}
 		out.close();
+		pl.done();
 	}
 
+    public static void humanDump(final ImmutableGraph g, final String outfilename, final ProgressLogger pl) throws IOException {
+		PrintWriter out = new PrintWriter(new FileWriter(outfilename));
+
+        NodeIterator nIter = g.nodeIterator();
+        while (nIter.hasNext()) {
+            int u = nIter.nextInt();
+            LazyIntIterator eIter = nIter.successors();
+
+			out.print(u + " : ");
+            int v = 0;
+            while ((v = eIter.nextInt()) != -1) {
+                    out.print(" " + v);
+            }
+			out.println();
+            pl.update();
+        }
+		out.close();
+        pl.done();
+    }
 
 }

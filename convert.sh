@@ -16,5 +16,5 @@ mvn install || die "Could not compile"
 [[ -f ${graphname}.offsets ]]  || \
 mvn exec:java -Dexec.mainClass="it.unimi.dsi.webgraph.BVGraph" -Dexec.args="-o -O -L ${graphname}" || \
 die "Could not compute offsets"
-mvn exec:java -Dexec.mainClass="Streaming" -Dexec.args="${graphname}" 
+mvn exec:java -Dexec.mainClass="Streaming" -Dexec.args="${graphname} -o ${graphname}.adj" 
 
