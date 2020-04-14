@@ -109,6 +109,8 @@ public class Streaming {
 
     public static void humanDump(final ImmutableGraph g, final String outfilename, final ProgressLogger pl) throws IOException {
 		PrintWriter out = new PrintWriter(new FileWriter(outfilename));
+			out.println("nodes=" + g.numNodes());
+			out.println("arcs=" + g.numArcs());
 
         NodeIterator nIter = g.nodeIterator();
         while (nIter.hasNext()) {
