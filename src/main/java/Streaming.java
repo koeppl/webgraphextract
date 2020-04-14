@@ -4,6 +4,10 @@ import it.unimi.dsi.webgraph.NodeIterator;
 import it.unimi.dsi.webgraph.LazyIntIterator;
 
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -22,13 +26,11 @@ import com.martiansoftware.jsap.UnflaggedOption;
 
 public class Streaming {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(Dump.class);
-
-	static final int kProgressStep = 10000;
+	private static final Logger LOGGER = LoggerFactory.getLogger(Streaming.class);
 
 
     public static void main(String arg[]) throws Exception {
-        SimpleJSAP jsap = new SimpleJSAP(Dump.class.getName(),
+        SimpleJSAP jsap = new SimpleJSAP(Streaming.class.getName(),
                 "Extracting the adjacency lists of a webgraph",
                 new Parameter[]{
                     new FlaggedOption("logInterval", JSAP.LONG_PARSER, Long.toString(ProgressLogger.DEFAULT_LOG_INTERVAL), JSAP.NOT_REQUIRED, 'l', "log-interval",
@@ -77,22 +79,30 @@ public class Streaming {
 		}
 
 
-
-        RandomAccessFile out = new RandomAccessFile(outfilename + ".adj","rw");
 		NodeIterator nIter = gr.nodeIterator();
+
+		RandomAccessFile out = new RandomAccessFile(outfilename + ".adj", "rw");
+		FileChannel channel = out.getChannel();
+
 		while(nIter.hasNext()) {
+			ByteArrayOutputStream bytestream = new ByteArrayOutputStream();
+			DataOutputStream dataout = new DataOutputStream(bytestream);
+
 			int u = nIter.nextInt();
 			LazyIntIterator eIter = nIter.successors();
 
 			int v = 0;
 			while((v = eIter.nextInt()) != -1) {
-                out.writeInt(Integer.reverseBytes(v));
+                dataout.writeInt(Integer.reverseBytes(v));
 			}
 
-            out.writeInt(Integer.reverseBytes(gr.numNodes()+u));
+            dataout.writeInt(Integer.reverseBytes(gr.numNodes()+u));
+			dataout.close();
+			bytestream.flush();
+			channel.write(ByteBuffer.wrap(bytestream.toByteArray()));
             pl.update();
-
 		}
+		channel.close();
 		out.close();
 		pl.done();
 	}
