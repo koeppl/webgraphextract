@@ -37,7 +37,7 @@ public class Streaming {
                             "The minimum time interval between activity logs in milliseconds."),
                     new UnflaggedOption("basename", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, JSAP.NOT_GREEDY, "The basename of the webgraph."),
                     new FlaggedOption("outfile", JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, 'o', "outfile", "The filename of the output."),
-                    new FlaggedOption("type", JSAP.LONG_PARSER, "0", JSAP.NOT_REQUIRED, 't', "type", "output type (0: binary, 1: human readable)."),
+                    new FlaggedOption("type", JSAP.LONG_PARSER, "0", JSAP.NOT_REQUIRED, 't', "type", "output type (0: binary, 1: human readable, 2: adjacency matrix)."),
 				});
 
         JSAPResult jsapResult = jsap.parse(arg);
@@ -58,6 +58,8 @@ public class Streaming {
 
 		if(outputtype == 1) {
 			humanDump(graph,  outfilename, pl);
+		} else if(outputtype == 2) {
+			matrixDump(graph, outfilename, pl);
 		} else {
 			binaryDump(graph, outfilename, pl);
 		}
@@ -122,6 +124,27 @@ public class Streaming {
             while ((v = eIter.nextInt()) != -1) {
                     out.print(" " + v);
             }
+			out.println();
+            pl.update();
+        }
+		out.close();
+        pl.done();
+    }
+
+    public static void matrixDump(final ImmutableGraph g, final String outfilename, final ProgressLogger pl) throws IOException {
+		PrintWriter out = new PrintWriter(new FileWriter(outfilename));
+        NodeIterator nIter = g.nodeIterator();
+        while (nIter.hasNext()) {
+            nIter.nextInt();
+            LazyIntIterator eIter = nIter.successors();
+			int v = eIter.nextInt();
+			for(int entry = 0; entry < g.numNodes(); ++entry) {
+				if(v < entry && v >= 0) {
+					v = eIter.nextInt();
+				}
+				out.print(v == entry ? '1' : '0');
+				if(entry+1 < g.numNodes()) { out.print(','); }
+			}
 			out.println();
             pl.update();
         }
