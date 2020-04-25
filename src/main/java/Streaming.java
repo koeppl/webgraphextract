@@ -74,7 +74,7 @@ public class Streaming {
 
 		{//!write stats
 
-			RandomAccessFile out = new RandomAccessFile(outfilename + ".stat","rw");
+			RandomAccessFile out = new RandomAccessFile(outfilename + ".sta","rw");
 			out.writeInt(Integer.reverseBytes(gr.numNodes()));
 			out.writeLong(Long.reverseBytes(gr.numArcs()));
 			out.close();
@@ -83,7 +83,7 @@ public class Streaming {
 
 		NodeIterator nIter = gr.nodeIterator();
 
-		RandomAccessFile out = new RandomAccessFile(outfilename + ".adj", "rw");
+		RandomAccessFile out = new RandomAccessFile(outfilename + ".dat", "rw");
 		FileChannel channel = out.getChannel();
 
 		while(nIter.hasNext()) {
